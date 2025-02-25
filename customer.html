@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GalactiBowl - Cosmic Cuisine</title>
+    <link rel="stylesheet" href="customer.css">
+    <link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+                        <nav>
+                <a href="/admin" class="nav-btn">Admin Panel</a>
+            </nav>
+            <h1>GalactiBowl</h1>
+            <p class="quote">"Cosmic Cuisine at Your Fingertips!"</p>
+        </header>
+
+       <!-- Order Now Section -->
+<div id="orderSection" class="section active">
+    <div class="location-selection">
+        <h2>Choose Your Location</h2>
+        <select id="locationSelect" required>
+            <option value="">Select a GalactiBowl Location</option>
+            <!-- Locations will be populated here dynamically -->
+        </select>
+    </div>
+</div>
+
+            <div id="registrationToggle">
+                <p>Enter your account email:</p>
+            </div>
+            <form id="loginForm">
+                <input type="email" id="email" placeholder="Enter your email" required />
+                <button type="submit">Login</button>
+            </form>
+            
+            <div id="registrationToggle">
+                <p>Don't have an account? <a href="#" id="showRegistration">Register Here</a></p>
+            </div>
+    
+            <form id="registrationForm" style="display: none;">
+                <h3>Create New Account</h3>
+                <input type="text" id="regName" placeholder="Full Name" required>
+                <input type="email" id="regEmail" placeholder="Email Address" required>
+                <input type="tel" id="regPhone" placeholder="Phone Number" required>
+                <div>
+                    <label class="checkbox-label">
+                        Join Membership Program
+                        <input type="checkbox" id="regMembership">
+                    </label>
+                </div>
+                <button type="submit">Create Account</button>
+            </form>
+        </div>
+
+            <div class="menu-selection">
+                <h2>Select Your Cosmic Cuisine</h2>
+                <div id="menuItem" class="menu-grid">
+                    <div id="menuItem" class="menu-grid">
+                        <div class="menu-item" data-id="1" data-price="3.99" data-name="Nebula Chips">
+                            <h3>Nebula Chips</h3>
+                            <p>$3.99</p>
+                            <p>Food</p>
+                            <button class="add-to-order">Add to Order</button>
+                        </div>
+                        <div class="menu-item" data-id="2" data-price="9.99" data-name="Booritoo">
+                            <h3>Booritoo</h3>
+                            <p>$9.99</p>
+                            <p>Food</p>
+                            <button class="add-to-order">Add to Order</button>
+                        </div>
+                        <div class="menu-item" data-id="3" data-price="9.99" data-name="Bowlz">
+                            <h3>Bowlz</h3>
+                            <p>$9.99</p>
+                            <p>Food</p>
+                            <button class="add-to-order">Add to Order</button>
+                        </div>
+                        <div class="menu-item" data-id="4" data-price="3.99" data-name="Soda">
+                            <h3>Soda</h3>
+                            <p>$3.99</p>
+                            <p>Drink</p>
+                            <button class="add-to-order">Add to Order</button>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <div class="order-summary">
+                <h2>Order Summary</h2>
+                <div id="selectedItems"></div>
+                <div id="orderTotal">Total: $0.00</div>              
+            </div>
+        </div>
+<div>
+    <label for="promoCode">Promo Code: </label>
+    <input type="text" id="promoCode" placeholder="Enter promo code" />
+    <button onclick="applyPromoCode()">Apply Promo Code</button>
+</div>
+
+<p id="discountMessage"></p> <!-- For displaying the discount message -->
+
+        <!-- Admin Section Placeholder -->
+        <div id="adminSection" class="section">
+            <h2>Admin Panel is accessible from <a href="/admin">this link</a>.</h2>
+        </div>
+    </div>
+<script>
+
+let order = [];
+let orderTotal = 0.0;
+
+
+function updateOrderSummary() {
+    const orderSummary = document.getElementById("selectedItems");
+    const totalDisplay = document.getElementById("orderTotal");
+
+    orderSummary.innerHTML = ""; 
+    order.forEach(item => {
+        const itemElement = document.createElement("div");
+        itemElement.textContent = `${item.name} - $${item.price.toFixed(2)} (x${item.quantity})`;
+        orderSummary.appendChild(itemElement);
+    });
+
+    totalDisplay.textContent = `Total: $${orderTotal.toFixed(2)}`;
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    let currentCustomerId = null;
+    
+    const loginForm = document.getElementById('login-form');
+    const emailInput = document.getElementById('email-input');
+    const menuItemContainer = document.getElementById('menuItem');
+    const selectedItemsContainer = document.getElementById('selectedItems');
+    const orderTotalElement = document.getElementById('orderTotal');
+    const placeCosmeticOrderButton = document.getElementById('placeCosmeticOrderButton');
+    
+    let selectedItems = [];
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value.trim();
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentCustomerId = data.customerId;
+                    alert('Login successful!');
+                    // Hide login form, show order section
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('orderSection').classList.add('active');
+                } else {
+                    alert(data.message || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('An error occurred during login');
+            }
+        });
+    }
+
+    if (menuItemContainer) {
+        const menuItem = menuItemContainer.querySelectorAll('.menu-item');
+        menuItem.forEach(item => {
+            const addButton = item.querySelector('button');
+            if (addButton) {
+                addButton.addEventListener('click', () => {
+                    const id = item.getAttribute('data-id');
+                    const name = item.getAttribute('data-name');
+                    const price = parseFloat(item.getAttribute('price'));
+
+                    selectedItems.push({ id, name, price });
+                    updateOrderSummary();
+                });
+            }
+        });
+    }
+
+    function updateOrderSummary() {
+        if (!selectedItemsContainer || !orderTotalElement) return;
+
+        selectedItemsContainer.innerHTML = '';
+
+        selectedItems.forEach(item => {
+            const itemElement = document.createElement('div');
+            itemElement.classList.add('selected-item');
+            itemElement.innerHTML = `
+                ${item.name} - $${item.price.toFixed(2)}
+                <button class="remove-item" data-id="${item.id}">Remove</button>
+            `;
+            selectedItemsContainer.appendChild(itemElement);
+        });
+
+        const total = selectedItems.reduce((sum, item) => sum + item.price, 0);
+        orderTotalElement.textContent = `Total: $${total.toFixed(2)}`;
+
+        const removeButtons = selectedItemsContainer.querySelectorAll('.remove-item');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const idToRemove = button.getAttribute('data-id');
+                selectedItems = selectedItems.filter(item => item.id !== idToRemove);
+                updateOrderSummary();
+            });
+        });
+    }
+
+    if (placeCosmeticOrderButton) {
+        placeCosmeticOrderButton.addEventListener('click', async () => {
+            if (!currentCustomerId) {
+                alert('Please log in first');
+                return;
+            }
+
+            if (selectedItems.length === 0) {
+                alert('Please add items to your order');
+                return;
+            }
+
+            try {
+                const response = await fetch('/placeOrder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        customerID: currentCustomerId,
+                        paymentMethod: 'Bank Account',
+                        items: selectedItems
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Order placed successfully! New balance: $' + data.newBalance);
+                    selectedItems = [];
+                    updateOrderSummary();
+                } else {
+                    alert(data.error || 'Failed to place order');
+                }
+            } catch (error) {
+                console.error('Order placement error:', error);
+                alert('An error occurred while placing the order');
+            }
+        });
+    }
+});
+document.getElementById('addEmployeeForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); 
+
+    const name = document.getElementById('employeeName').value.trim();
+    const salary = parseFloat(document.getElementById('employeeSalary').value);
+    const locationid = parseInt(document.getElementById('employeeLocation').value);
+    const positionid = parseInt(document.getElementById('employeePosition').value);
+
+    if (!name || isNaN(salary) || isNaN(locationid) || isNaN(positionid)) {
+        alert('Please fill in all fields correctly.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/addEmployee', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, salary, locationid, positionid }),
+        });
+
+        const result = await response.json();
+        console.log('Response from server:', result);
+
+        if (response.ok) {
+            alert('Employee added successfully!');
+            fetchEmployees(); 
+        } else {
+            alert(result.error || 'Failed to add employee.');
+        }
+    } catch (err) {
+        console.error('Error adding employee:', err);
+        alert('An error occurred. Please try again.');
+    }
+
+    document.getElementById('addEmployeeForm').reset();
+});
+
+
+document.getElementById('loginForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    
+    const email = document.getElementById('email').value;
+  
+    if (!email) {
+      alert('Please enter your email!');
+      return;
+    }
+  
+    try {
+      const response = await fetch('/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+  
+      const data = await response.json();
+      if (response.ok) {
+        sessionStorage.setItem('customerId', data.customerId);  
+        alert(data.message);  
+      } else {
+        alert(data.message);  
+      }
+    } catch (error) {
+      console.error('Error logging in:', error);
+      alert('Login failed. Please try again.');
+    }
+  });
+
+  document.getElementById('addPromoCodeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const promoCode = document.getElementById('promoCode').value.trim().toUpperCase();
+    const discountPercentage = parseFloat(document.getElementById('discountPercentage').value);
+    const description = document.getElementById('description').value.trim();
+
+    console.log('Submitting:', { promoCode, discountPercentage, description });
+
+    try {
+        const response = await fetch('/addPromoCode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                promocode: promoCode,
+                discountpercentage: discountPercentage,
+                description
+            })
+        });
+
+        const result = await response.json();
+        console.log('Response:', response.status, result);
+
+        if (response.ok) {
+            alert(`Promo code "${promoCode}" added successfully!`);
+        } else {
+            alert(`Error: ${result.error || 'Failed to add promo code.'}`);
+        }
+    } catch (err) {
+        console.error('Unexpected error:', err);
+        alert('Unexpected error occurred. Check the console for details.');
+    }
+});
+
+  document.getElementById("placeOrderBtn").addEventListener("click", async () => {
+    console.log('Place Order button clicked');
+
+    const customerId = sessionStorage.getItem('customerId');
+    const paymentMethod = document.getElementById("receiptPayment").value;
+
+    if (!customerId) {
+        alert("Please log in first!");
+        return;
+    }
+
+    if (!paymentMethod) {
+        alert("Please select a payment method!");
+        return;
+    }
+
+    const orderData = {
+        customerID: customerId,
+        paymentMethod: paymentMethod,
+        items: [] 
+    };
+
+    try {
+        const response = await fetch('http://localhost:3000/placeOrder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderData)
+        });
+
+        if (response.ok) {
+            const responseData = await response.json();
+            console.log("Order placed successfully:", responseData);
+            alert("Order placed successfully!");
+        } else {
+            const errorData = await response.json();
+            console.log("Error placing order:", errorData);
+            alert("Failed to place order: " + errorData.error);
+        }
+    } catch (error) {
+        console.error("Error during the fetch:", error);
+        alert("An error occurred. Please try again.");
+    }
+});
+
+
+  document.getElementById("menuItem").addEventListener("click", event => {
+    if (event.target.classList.contains("add-to-order")) {
+        const menuItem = event.target.closest(".menu-item");
+        const id = menuItem.dataset.id;
+        const price = parseFloat(menuItem.dataset.price);
+        const name = menuItem.dataset.name;
+
+        const existingItem = order.find(item => item.id === id);
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            order.push({ id, name, price, quantity: 1 });
+        }
+
+        orderTotal += price; 
+        updateOrderSummary(); 
+    }
+});
+
+const placeOrder = async (email, totalAmount, paymentMethod) => {
+    try {
+      const response = await fetch('http://localhost:3000/placeOrder', {  
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, totalAmount, paymentMethod })
+      });
+  
+      const data = await response.json();
+      if (data.message === 'Order placed successfully') {
+        console.log('Receipt:', data.receipt);
+        return data.receipt; 
+      } else {
+        console.log(data.message);
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+    }
+  };
+  
+  const processPayment = async (customerId, receiptId) => {
+    try {
+      const response = await fetch('http://localhost:3000/processPayment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ customerId, receiptId }),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Payment processed successfully:', data);
+      } else {
+        const errorData = await response.json();
+        console.log('Payment failed:', errorData);
+      }
+    } catch (error) {
+      console.error('Error making payment request:', error);
+    }
+  };
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const orderSection = document.getElementById('orderSection');
+    const adminSection = document.getElementById('adminSection');
+    const orderNowBtn = document.getElementById('orderNowBtn');
+    const adminPanelBtn = document.getElementById('adminPanelBtn');
+    const placeOrderBtn = document.getElementById('placeOrderBtn');
+    const orderTotalElement = document.getElementById('orderTotal');
+    const selectedItemsContainer = document.getElementById('selectedItems');
+    
+
+    
+    async function fetchMenuItem() {
+        try {
+            const response = await fetch('/menuitem');
+            const menuItem = await response.json();
+            populateMenuItem(menuItem);
+        } catch (error) {
+            console.error('Error fetching menu items:', error);
+        }
+    }
+    
+
+    function populateMenuItem(menuItem) {
+        console.log("Populating Menu Items:", menuItem);  
+    
+        const menuContainer = document.getElementById('menuItem');
+        menuContainer.innerHTML = ''; 
+    
+        menuItem.forEach(item => {
+            const menuItemElement = document.createElement('div');
+            menuItemElement.classList.add('menu-item');
+            menuItemElement.innerHTML = `
+                <h3>${item.name}</h3>
+                <p>$${parseFloat(item.price).toFixed(2)}</p>
+                <p>${item.category}</p>  <!-- Correct field name is 'category' -->
+            `;
+            menuItemElement.dataset.id = item.id;
+            menuItemElement.dataset.price = item.price;
+            menuItemElement.dataset.name = item.name;
+    
+            menuItemElement.addEventListener('click', () => {
+                menuItemElement.classList.toggle('selected');
+                updateOrderSummary();
+            });
+    
+            menuContainer.appendChild(menuItemElement);
+        });
+    }
+
+    
+    function updateOrderSummary() {
+        const selectedMenuItem = document.querySelectorAll('.menu-item.selected');
+        const selectedItemsHTML = Array.from(selectedMenuItem).map(item => 
+            `${item.dataset.name} - $${parseFloat(item.dataset.price).toFixed(2)}`
+        ).join('<br>');
+
+        const total = Array.from(selectedMenuItem).reduce((sum, item) => 
+            sum + parseFloat(item.dataset.price), 0
+        );
+
+        selectedItemsContainer.innerHTML = selectedItemsHTML;
+        orderTotalElement.textContent = `Total: $${total.toFixed(2)}`;
+    }
+
+    orderNowBtn.addEventListener('click', () => {
+        orderSection.classList.add('active');
+        adminSection.classList.remove('active');
+        orderNowBtn.classList.add('active');
+        adminPanelBtn.classList.remove('active');
+    });
+
+    adminPanelBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        
+        orderSection.classList.remove('active');
+        adminSection.classList.add('active');
+        orderNowBtn.classList.remove('active');
+        adminPanelBtn.classList.add('active');
+    });
+
+    placeOrderBtn.addEventListener('click', async () => {
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const phone = document.getElementById('phone').value;
+        const location = document.getElementById('locationSelect').value;
+        const selectedMenuItem = document.querySelectorAll('.menu-item.selected');
+    
+        if (!name || !email || !phone || !location || selectedMenuItem.length === 0) {
+            alert('Please complete all fields and select at least one menu item.');
+            return;
+        }
+    
+        const totalAmount = parseFloat(orderTotalElement.textContent.replace('Total: $', ''));
+        const items = Array.from(selectedMenuItem).map(item => ({
+            itemID: item.dataset.id,
+            quantity: 1 
+        }));
+    
+        try {
+            const orderResponse = await fetch('/placeOrder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    customerID: customerID, 
+                    totalAmount: totalAmount,
+                    paymentMethod: 'Online', 
+                    items: items
+                })
+            });
+    
+            const orderData = await orderResponse.json();
+    
+            if (orderResponse.ok) {
+                alert('Order placed successfully! Thank you for choosing GalactiBowl!');
+            } else {
+                alert(`Error: ${orderData.error}`);
+            }
+        } catch (error) {
+            console.error('Error placing order:', error);
+            alert('Failed to place order. Please try again.');
+        }
+    });
+    
+    fetchMenuItem();
+});
+
+</script>
+<script src="/customer.js" defer></script>
+</body>
+</html>

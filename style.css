@@ -1,0 +1,171 @@
+/* General styles */
+body {
+
+    font-family: "Audiowide", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+      
+      
+    background-color: #e5f3fd;
+    margin: 0;
+    padding: 20px;
+    color: #430d4b;
+}
+ /*c874b2*/
+
+ h1 {
+    text-align: center;
+    color: #c874b2;
+    margin-top: 20px;
+}
+
+.quote {
+    display: block; /* Makes the quote appear on a new line */
+    font-size: 18px; /* Adjust font size for the quote */
+    color: #6f2c8f; /* Slightly different color for the quote */
+    margin-top: 5px; /* Space between title and quote */
+    font-style: italic; /* Italicize the quote for emphasis */
+}
+
+nav {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.nav-btn {
+    background-color: #430d4b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+h2 {
+    color: #c874b2;
+    margin-top: 30px;
+}
+
+h3 {
+    margin-top: 20px;
+}
+
+/* Form and Input Styles */
+label {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #c874b2;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+input[type="checkbox"],
+select {
+    width: 80%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+button {
+    background-color: #430d4b;
+    color: white;
+    padding: 10px 15px;
+    font-size: 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #c874b2;
+}
+
+/* Table Styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* Container for dynamic content like menu items */
+#menuItemsContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+#menuItemsContainer div {
+    background-color: white;
+    border-radius: 6px;
+    padding: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+#menuItemsContainer h3 {
+    margin-top: 0;
+    color: #c874b2;
+}
+
+#menuItemsContainer p {
+    margin: 5px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 24px;
+    }
+
+    table {
+        font-size: 12px;
+    }
+
+    label {
+        font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="date"],
+    select {
+        font-size: 14px;
+    }
+
+    button {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    #menuItemsContainer {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}

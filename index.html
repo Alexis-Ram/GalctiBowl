@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Nova+Square&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+        <meta charset="UTF-8">
+        <title>GalactiBowl - Admin Panel</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            a.btn {
+                display: inline-block;
+                margin-bottom: 20px;
+                padding: 10px 20px;
+                background-color: #430d4b;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <body>
+            <nav>
+                <div id="button">
+                    <a href="customer.html"class="nav-btn">CLICK HERE TO PLACE ORDER AS CUSTOMER!</a>
+                </div>
+            </nav>
+            </div>
+
+        
+        <h1>GALACTIBOWL Admin Panel</h1>
+    </head>    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+
+async function fetchEmployees() {
+    try {
+        const response = await fetch('/getEmployees'); // Get employees from the backend
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error fetching employees:', errorText);
+            return;
+        }
+
+        const employees = await response.json();
+        console.log('Employees fetched:', employees);
+
+        if (Array.isArray(employees)) {
+            const employeeTableBody = document.getElementById('employeeTableBody');
+            employeeTableBody.innerHTML = '';  
+
+            employees.forEach(employee => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${employee.employeeid}</td>
+                    <td>${employee.name}</td>
+                    <td>$${employee.salary.toFixed(2)}</td>
+                    <td>${employee.locationid}</td>
+                    <td>${employee.positionid}</td>
+                `;
+                employeeTableBody.appendChild(row);
+            });
+        } else {
+            console.error('Fetched data is not an array:', employees);
+        }
+    } catch (err) {
+        console.error('Error fetching employees:', err);
+    }
+}
+
+fetchEmployees();
+   
+        
+        async function fetchData(endpoint, tableId) {
+            const response = await fetch(`http://localhost:3000/${endpoint}`);
+            const data = await response.json();
+            
+            console.log(`Data for ${endpoint}:`, data);
+            
+            const table = document.getElementById(tableId);
+            table.innerHTML = ''; 
+        
+            if (!table) {
+                console.error(`Table with ID ${tableId} not found!`);
+                return;
+            }
+        
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                Object.values(item).forEach(value => {
+                    const cell = document.createElement('td');
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+                if (endpoint === 'menuitem') {
+                    const removeButton = document.createElement('button');
+                    removeButton.textContent = 'Remove';
+                    removeButton.onclick = () => {
+                        console.log("Attempting to remove item with ID:", item.id);
+                        removeMenuItem(item.id);
+                    };
+                    const removeCell = document.createElement('td');
+                    removeCell.appendChild(removeButton);
+                    row.appendChild(removeCell);
+                }
+                table.appendChild(row);
+            });
+        }
+        
+        function initializeData() {
+            fetchData('customer', 'customerTable');
+            fetchData('menuitem', 'menuItemTable');
+            fetchData('receipt', 'receiptTable');
+            fetchData('bankaccount', 'bankAccountTable');
+        }
+
+async function addCustomer() {
+        const name = document.getElementById('customerName').value;
+        const email = document.getElementById('customerEmail').value;
+        const phoneNumber = document.getElementById('customerPhone').value;
+        const membershipStatus = document.getElementById('customerMembership').checked;
+        const loyaltyPoints = parseInt(document.getElementById('customerPoints').value) || 0;
+        
+        console.log("Name:", name);
+        console.log("Email:", email);
+        console.log("Phone Number:", phoneNumber);
+        console.log("Membership Status:", membershipStatus);
+        console.log("Loyalty Points:", loyaltyPoints);
+        
+        try {
+            const response = await fetch('http://localhost:3000/customer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phoneNumber, membershipStatus, loyaltyPoints })
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to add customer: ${response.statusText}`);
+            }
+            console.log('Customer added successfully!');
+            initializeData();
+            } catch (error) {
+            console.error('Error adding customer:', error);
+            alert('Failed to add customer. Please try again.');
+        }
+ }
+
+ async function findCustomerByEmail(email) {
+    try {
+        const result = await pool.query('SELECT * FROM customer WHERE email = $1', [email]);
+        console.log("Query result:", result.rows);
+        return result.rows[0]; 
+    } catch (error) {
+        console.error('Error finding customer by email:', error);
+        throw error;
+    }
+}
+
+async function createCustomer(email) {
+    const result = await pool.query('INSERT INTO customer (email) VALUES ($1) RETURNING id', [email]);
+    return result.rows[0]; // Return the newly created customer
+}
+
+async function addMenuItem() {
+    const name = document.getElementById('itemName').value;
+    const price = parseFloat(document.getElementById('itemPrice').value);
+    const category = document.getElementById('itemType').value;  // Use the correct category value
+    const quantity = parseInt(document.getElementById('itemQuantity').value);
+
+    if (!name || !price || !category || isNaN(quantity) || quantity <= 0) {
+        alert('Please fill out all fields correctly.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/menuitem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                price,
+                category,  
+                quantity
+            })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            console.log('Menu item added:', result);
+            alert('Menu item added successfully!');
+            fetchMenuItem();  
+        } else {
+            throw new Error(result.error || 'Failed to add menu item');
+        }
+    } catch (error) {
+        console.error('Error adding menu item:', error);
+        alert(error.message);
+    }
+}
+
+
+        async function addReceipt() {
+            const orderDate = document.getElementById('receiptDate').value;
+            const totalAmount = parseFloat(document.getElementById('receiptAmount').value);
+            const paymentMethod = document.getElementById('receiptPayment').value;
+            const customerID = parseInt(document.getElementById('receiptCustomerID').value);
+
+            console.log("Adding receipt:", { orderDate, totalAmount, paymentMethod, customerID });
+
+            try {
+                const response = await fetch('http://localhost:3000/receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderDate, totalAmount, paymentMethod, customerID })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Error adding receipt:', errorData.error || response.statusText);
+                    alert(errorData.error || 'Failed to add receipt. Please try again.');
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Receipt added successfully:', data);
+                initializeData(); // Refresh UI
+            } catch (error) {
+                console.error('Error adding receipt:', error);
+                alert('Failed to add receipt. Please try again.');
+            }
+        }
+
+        async function addBankAccount() {
+            const balance = parseFloat(document.getElementById('accountBalance').value);
+            const customerID = parseInt(document.getElementById('accountCustomerID').value);
+        
+            console.log("Adding bank account with data:", { balance, customerID });
+        
+            try {
+                const response = await fetch('http://localhost:3000/bankaccount', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ balance, customerID })
+                });
+        
+                console.log("Received response status:", response.status);
+        
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("Error response from backend:", errorData);
+                    alert('Failed to add bank account. Please try again.');
+                    return;
+                }
+        
+                const data = await response.json();
+                console.log("Bank account added successfully:", data);
+        
+                initializeData(); 
+        
+            } catch (error) {
+                console.error('Error while sending request:', error);
+                alert('Failed to add bank account. Please try again.');
+            }
+        }
+        async function addOrderItem() {
+            const receiptId = document.getElementById('orderReceiptID').value;
+            const itemId = document.getElementById('orderItemID').value;
+            const quantity = document.getElementById('orderQuantity').value;
+        
+            if (!receiptId || !itemId || !quantity) {
+                alert('Please fill out all fields.');
+                return;
+            }
+        
+            try {
+                const response = await fetch('/orderitem', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        receipt_id: receiptId,
+                        item_id: itemId,
+                        quantity: quantity,
+                    })
+                });
+        
+                const result = await response.json();
+                if (response.ok) {
+                    console.log('Order item added:', result);
+                    alert('Order item added successfully!');
+                    fetchOrderItem();  // Refresh the order items table
+                } else {
+                    throw new Error(result.error || 'Failed to add order item');
+                }
+            } catch (error) {
+                console.error('Error adding order item:', error);
+                alert(error.message);
+            }
+        }
+        
+        async function fetchMenuItem() {
+            try {
+                const response = await fetch('/menuitem');
+                const menuItemData = await response.json();
+        
+                const menuItemTable = document.getElementById('menuItemTable');
+                menuItemTable.innerHTML = '';  // Clear the existing rows
+        
+                menuItemData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.id}</td>
+                        <td>${item.name}</td>
+                        <td>$${item.price.toFixed(2)}</td>
+                        <td>${item.category}</td>  <!-- Display category (type) -->
+                        <td>${item.quantity}</td>
+                    `;
+                    menuItemTable.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching menu items:', error);
+                alert('Failed to fetch menu items');
+            }
+        }
+        
+
+async function addRestaurantLocation() {
+    const address = document.getElementById('locationAddress').value;
+    const capacity = parseInt(document.getElementById('locationCapacity').value);
+
+    try {
+        const response = await fetch('/restaurantlocations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ address, capacity })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            console.log('Location added:', result);
+            alert('Location added successfully!');
+
+            fetchRestaurantLocations();  
+        } else {
+            throw new Error(result.error || 'Failed to add location');
+        }
+    } catch (error) {
+        console.error('Error adding restaurant location:', error);
+        alert(error.message);
+    }
+}
+
+async function fetchRestaurantLocations() {
+    try {
+        const response = await fetch('/restaurantlocations');
+        const locations = await response.json();
+        
+        const tableBody = document.querySelector('#restaurantLocationsTable tbody');
+        tableBody.innerHTML = ''; // Clear existing rows
+        
+        locations.forEach(location => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${location.locationid}</td>
+                <td>${location.address}</td>
+                <td>${location.capacity}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error fetching restaurant locations:', error);
+    }
+}
+
+// Call this when the page loads
+document.addEventListener('DOMContentLoaded', fetchRestaurantLocations);
+
+
+        window.onload = fetchMenuItem;
+
+        async function removeMenuItem(itemId) {
+            try {
+                const response = await fetch(`http://localhost:3000/menuitem/${itemId}`, {
+                    method: 'DELETE',
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("Error deleting item:", errorData);
+                    alert('Failed to remove menu item. Please try again.');
+                    return;
+                }
+
+                console.log('Menu item removed successfully!');
+                initializeData();
+            } catch (error) {
+                console.error('Error during menu item removal:', error);
+                alert('Error removing menu item. Please try again.');
+            }
+        }
+        
+        async function updateMenuItem(id, name, description, price, available) {
+            const menuItemData = {
+                name: name,
+                description: description,
+                price: parseFloat(price), 
+                available: Boolean(available) 
+            };
+        
+            try {
+                const response = await fetch(`http://localhost:3000/menu_items/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(menuItemData)
+                });
+        
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Error updating menu item:', errorData);
+                    alert('Failed to update menu item.');
+                    return;
+                }
+        
+                const updatedMenuItem = await response.json();
+                console.log('Menu item updated successfully:', updatedMenuItem);
+        
+                refreshMenuItem(); 
+            } catch (error) {
+                console.error('Error while updating menu item:', error);
+                alert('Failed to update menu item.');
+            }
+        }
+
+        async function updateBankAccountBalance(customerID, totalAmount) {
+            try {
+                const accountResponse = await fetch(`http://localhost:3000/bankaccount/${customerID}`);
+                if (!accountResponse.ok) {
+                    const errorData = await accountResponse.json(); // Log the error response data
+                    console.error("Failed to fetch bank account:", errorData);
+                    throw new Error(`Failed to fetch bank account for customer ID ${customerID}`);
+                }
+                const account = await accountResponse.json();
+                const currentBalance = parseFloat(account.balance);
+        
+                const newBalance = currentBalance - parseFloat(totalAmount);
+                if (newBalance < 0) {
+                    alert("Insufficient funds to process the transaction.");
+                    return false; 
+                }
+        
+                const updateResponse = await fetch(`http://localhost:3000/bankaccount/${customerID}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ balance: newBalance })
+                });
+                if (!updateResponse.ok) {
+                    const errorData = await updateResponse.json(); 
+                    console.error("Failed to update bank account:", errorData);
+                    throw new Error(`Failed to update bank account for customer ID ${customerID}`);
+                }
+        
+                const updatedAccount = await updateResponse.json();
+                console.log("Bank account updated successfully:", updatedAccount);
+                return true;
+        
+            } catch (error) {
+                console.error("Error updating bank account:", error);
+                alert("Failed to update bank account. Please try again.");
+                return false; 
+            }
+        }
+        
+
+        async function updateBankAccount(receiptID) {
+            try {
+                const receiptResponse = await fetch(`http://localhost:3000/receipt/${receiptID}`);
+                if (!receiptResponse.ok) {
+                    throw new Error(`Failed to fetch receipt with ID ${receiptID}`);
+                }
+                const receipt = await receiptResponse.json();
+                const { totalAmount, customerID } = receipt;
+        
+                const success = await updateBankAccountBalance(customerID, totalAmount);
+        
+                if (success) {
+                    alert("Bank account updated successfully!");
+                    initializeData();
+                }
+        
+            } catch (error) {
+                console.error("Error updating bank account:", error);
+                alert("Failed to update bank account. Please try again.");
+            }
+        }
+        
+        // Fetch employees from the database and display them in the table
+    async function fetchEmployees() {
+        try {
+            const response = await fetch('/getEmployees');
+            if (!response.ok) throw new Error('Failed to fetch employees');
+
+            const employees = await response.json();
+            const employeeTableBody = document.getElementById('employeeTableBody');
+            employeeTableBody.innerHTML = ''; // Clear the table
+
+            employees.forEach(employee => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${employee.employeeid}</td>
+                    <td>${employee.name}</td>
+                    <td>${employee.salary}</td>
+                    <td>${employee.locationid}</td>
+                    <td>${employee.positionid}</td>
+                `;
+                employeeTableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error fetching employees:', error);
+        }
+    }
+
+    // Fetch promo codes from the database and display them in the table
+    async function fetchPromoCodes() {
+        try {
+            const response = await fetch('/getPromoCodes'); // Ensure this matches the back-end route
+            if (!response.ok) throw new Error('Failed to fetch promo codes');
+    
+            const promoCodes = await response.json();
+            const promoCodeTableBody = document.getElementById('promoCodeTableBody');
+            promoCodeTableBody.innerHTML = ''; // Clear the table body
+    
+            promoCodes.forEach(promo => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${promo.promocode}</td>
+                    <td>${promo.discountpercentage}%</td>
+                    <td>${promo.description}</td>
+                `;
+                promoCodeTableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error fetching promo codes:', error);
+        }
+    }
+    
+    // Call the function when the page loads
+    window.onload = () => {
+        fetchPromoCodes();
+    };
+    
+
+
+    // Add a new employee to the database
+    document.getElementById('addEmployeeForm').addEventListener('submit', async (event) => {
+        event.preventDefault(); // Prevent form submission
+
+        const name = document.getElementById('employeeName').value;
+        const salary = parseFloat(document.getElementById('employeeSalary').value);
+        const locationId = parseInt(document.getElementById('employeeLocation').value, 10);
+        const positionId = parseInt(document.getElementById('employeePosition').value, 10);
+
+        try {
+            const response = await fetch('/addEmployee', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, salary, locationId, positionId }),
+            });
+
+            const result = await response.json();
+            const messageDiv = document.getElementById('employeeMessage');
+
+            if (response.ok) {
+                messageDiv.textContent = result.message;
+                messageDiv.style.color = 'green';
+                fetchEmployees(); // Refresh the employee list
+            } else {
+                messageDiv.textContent = result.error || 'Failed to add employee.';
+                messageDiv.style.color = 'red';
+            }
+        } catch (error) {
+            console.error('Error adding employee:', error);
+        }
+    });
+
+    // Add a new promo code to the database
+    document.getElementById('addPromoCodeForm').addEventListener('submit', async (event) => {
+        event.preventDefault(); // Prevent form submission
+
+        const promoCode = document.getElementById('promoCode').value;
+        const discountPercentage = parseFloat(document.getElementById('discountPercentage').value);
+        const description = document.getElementById('description').value;
+
+        try {
+            const response = await fetch('/addPromoCode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ promoCode, discountPercentage, description }),
+            });
+
+            if (response.ok) {
+                alert('Promo code added successfully!');
+                fetchPromoCodes(); // Refresh the promo code list
+            } else {
+                alert('Failed to add promo code.');
+            }
+        } catch (error) {
+            console.error('Error adding promo code:', error);
+        }
+    });
+
+    // Load employees and promo codes on page load
+    window.onload = () => {
+        fetchEmployees();
+        fetchPromoCodes();
+    };
+
+        async function processPayment() {
+            const customerId = parseInt(document.getElementById('paymentCustomerID').value);
+            const receiptId = parseInt(document.getElementById('paymentReceiptID').value);
+        
+            try {
+                console.log(`Sending payment request for customer ${customerId} and receipt ${receiptId}`);
+        
+                const paymentResponse = await fetch('http://localhost:3000/processPayment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerId, receiptId })
+                });
+        
+                if (!paymentResponse.ok) {
+                    const errorData = await paymentResponse.json();
+                    console.error("Backend Error:", errorData.error);
+                    throw new Error(errorData.error);
+                }
+        
+                const paymentData = await paymentResponse.json();
+                console.log("Payment response:", paymentData);
+        
+                alert(`Payment processed successfully! New balance: $${paymentData.newBalance.toFixed(2)}`);
+        
+                initializeData();
+            } catch (error) {
+                console.error("Error processing payment:", error);
+                alert("Failed to process payment. Please try again.");
+            }
+        }        
+        async function processOrder() {
+            const customerID = localStorage.getItem('customerId');
+            const selectedItems = getSelectedItems();  
+        
+            if (!customerID) {
+                alert('Please log in first');
+                return;
+            }
+        
+            if (selectedItems.length === 0) {
+                alert('Please select items for your order');
+                return;
+            }
+        
+            try {
+                const response = await fetch('/processOrder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        customerID,
+                        orderItem: selectedItems
+                    })
+                });
+        
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+        
+                    fetchMenuItem();  
+                } else {
+                    throw new Error(result.error || 'Failed to process the order');
+                }
+            } catch (error) {
+                console.error('Error processing order:', error);
+                alert(error.message);
+            }
+        }
+        
+        async function refreshMenuItem() {
+            try {
+                const response = await fetch('http://localhost:3000/menu_items');
+                const menuItem = await response.json();
+        
+                const menuItemContainer = document.getElementById('menuItemContainer');
+                menuItemContainer.innerHTML = '';
+        
+                menuItem.forEach(item => {
+                    const itemElement = document.createElement('div');
+                    itemElement.innerHTML = `
+                        <h3>${item.name}</h3>
+                        <p>${item.description}</p>
+                        <p>Price: $${item.price.toFixed(2)}</p>
+                        <p>Available: ${item.available ? 'Yes' : 'No'}</p>
+                    `;
+                    menuItemContainer.appendChild(itemElement);
+                });
+            } catch (error) {
+                console.error('Error fetching menu items:', error);
+            }
+        }
+        document.getElementById('generateDataButton').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/generateRandomData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);  // Alert the user with success message
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + error.error);  // Alert the user with error message
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while generating random data.');
+            }
+        });
+        
+        
+          
+    </script>
+</head>
+<body onload="initializeData()">
+
+    <!-- Customer Section -->
+    <h2>Customers</h2>
+    <table border="1">
+        <thead>
+            <tr><th>Customer ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Membership</th><th>Loyalty Points</th></tr>
+        </thead>
+        <tbody id="customerTable"></tbody>
+    </table>
+    <h3>Add New Customer</h3>
+<label>Name: <input type="text" id="customerName" /></label>
+<label>Email: <input type="email" id="customerEmail" /></label>
+<label>Phone: <input type="text" id="customerPhone" /></label>
+<label>Membership: <input type="checkbox" id="customerMembership" /></label>
+<label>Loyalty Points: <input type="number" id="customerPoints" /></label>
+
+<button onclick="addCustomer()">Add Customer</button>
+
+
+    <!-- Menu Item Section -->
+    <h2>Menu Items</h2>
+    <table border="1">
+        <thead>
+            <tr><th>Item ID</th><th>Name</th><th>Price</th><th>Type</th><th>Quantity</th></tr>
+        </thead>
+        <tbody id="menuItemTable"></tbody>
+    </table>
+    <h3>Add New Menu Item</h3>
+    <label>Name: <input type="text" id="itemName" /></label>
+    <label>Price: <input type="number" step="0.01" id="itemPrice" /></label>
+    <label>Type: 
+        <select id="itemType">
+            <option value="Main">Main</option>
+            <option value="Side">Side</option>
+            <option value="Drink">Drink</option>
+            <option value="Dessert">Dessert</option>
+        </select>
+    </label>
+    <label> Quantity: <input type="number" id="itemQuantity" /></label>
+    <button onclick="addMenuItem()">Add Menu Item</button>
+
+    <!-- Receipt Section -->
+    <h2>Receipts</h2>
+    <table border="1">
+        <thead>
+            <tr><th>Receipt ID</th><th>Customer ID</th><th>Total Amount</th><th>Payment Method</th></tr>
+        </thead>
+        <tbody id="receiptTable"></tbody>
+    </table>
+    <h3>Add New Receipt</h3>
+    <label>Customer ID: <input type="number" id="accountCustomerID" /></label>
+    <label>Total Amount: <input type="number" step="0.01" id="receiptAmount" /></label>
+    <label>Payment Method: 
+        <select id="receiptPayment">
+            <option value="Debit Card">Debit Card</option>
+            <option value="Credit Card">Credit Card</option>
+            <option value="Cash">Cash</option>
+        </select>
+    </label>
+    <!-- <label>Customer ID: <input type="number" id="receiptCustomerID" /></label> -->
+    <button onclick="addReceipt()">Add Receipt</button>
+
+    <!-- Bank Account Section -->
+    <h2>Bank Accounts</h2>
+    <table border="1">
+        <thead>
+            <tr><th>Account ID</th><th>Balance</th><th>Customer ID</th></tr>
+        </thead>
+        <tbody id="bankAccountTable"></tbody>
+    </table>
+    <h3>Add New Bank Account</h3>
+    <label>Balance: <input type="number" step="0.01" id="accountBalance" /></label>
+    <label>Customer ID: <input type="number" id="accountCustomerID" /></label>
+    <button onclick="addBankAccount()">Add Bank Account</button>
+
+<h2>Order Items</h2>
+<table border="1">
+    <thead>
+        <tr><th>Receipt ID</th><th>Item ID</th><th>Quantity</th></tr>  <!-- Removed "Order Item ID" -->
+    </thead>
+    <tbody id="orderItemTable"></tbody>
+</table>
+
+<h3>Add New Order Item</h3>
+<label>Receipt ID: <input type="number" id="orderReceiptID" /></label>
+<label>Item ID: <input type="number" id="orderItemID" /></label>
+<label>Quantity: <input type="number" id="orderQuantity" /></label>
+<button onclick="addOrderItem()">Add Order Item</button>
+
+    <h2>Restaurant Locations</h2>
+
+    <table id="restaurantLocationsTable">
+        <thead>
+            <tr>
+                <th>Location ID</th>
+                <th>Address</th>
+                <th>Capacity</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="restaurantLocationsBody">
+            <!-- Dynamic content will be inserted here -->
+        </tbody>
+    </table>
+    
+
+    <h3>Add New Restaurant Location</h3>
+
+    <form id="addRestaurantLocationForm">
+        <input type="text" id="locationAddress" placeholder="Address" required>
+        <input type="number" id="locationCapacity" placeholder="Capacity" required>
+        <button type="submit">Add Restaurant Location</button>
+    </form>
+
+    <h2>Employees</h2>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Salary</th>
+            <th>Location ID</th>
+            <th>Position ID</th>
+        </tr>
+    </thead>
+    <tbody id="employeeTableBody"></tbody>
+</table>
+
+<h2>Add New Employee</h2>
+<form id="addEmployeeForm" class="form-container">
+    <div class="form-group">
+        <label for="employeeName">Name:</label>
+        <input type="text" id="employeeName" placeholder="Enter employee name" required />
+    </div>
+
+    <div class="form-group">
+        <label for="employeeSalary">Salary:</label>
+        <input type="number" id="employeeSalary" step="0.01" placeholder="Enter salary" required />
+    </div>
+
+    <div class="form-group">
+        <label for="employeeLocation">Location ID:</label>
+        <input type="number" id="employeeLocation" placeholder="Enter location ID" required />
+    </div>
+
+    <div class="form-group">
+        <label for="employeePosition">Position ID:</label>
+        <input type="number" id="employeePosition" placeholder="Enter position ID" required />
+    </div>
+
+    <button type="submit" class="submit-button">Add Employee</button>
+</form>
+
+<div id="employeeMessage" class="message-container"></div> <!-- Success/Error messages -->
+
+
+
+<h2>Promo Codes</h2>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Promo Code</th>
+            <th>Discount Percentage</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody id="promoCodeTableBody"></tbody>
+</table>
+
+    <h2>Add a Promo Code</h2>
+    <form id="addPromoCodeForm">
+        <label for="promoCode">Promo Code:</label>
+        <input type="text" id="promoCode" required />
+    
+        <label for="discountPercentage">Discount Percentage:</label>
+        <input type="number" id="discountPercentage" step="0.01" required />
+    
+        <label for="description">Description:</label>
+        <textarea id="description" required></textarea>
+    
+        <button type="submit">Add Promo Code</button>
+    </form>
+
+<div id="promoMessage"></div> <!-- For success/error messages -->
+
+    <script src="customer.js"></script>
+</body>
+</html>
